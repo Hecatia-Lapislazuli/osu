@@ -1252,9 +1252,18 @@ namespace osu.Game.Screens.Edit
 
             if (trackPlaying)
             {
-                // generally users are not looking to perform tiny seeks when the track is playing.
-                // this multiplication undoes the division that will be applied in the underlying seek operation.
-                // scale by BPM to keep the seek amount constant across all BPMs.
+                // While the track is playing, we want the seek amount to remain a set amount of time, rather than being scaled on BPM or beat divisors.
+                // This is to prevent absurdly long seeks at low BPM, and as generally users are not looking to perform tiny seeks while the track is playing, we bypass the beat divisor.
+
+                // The clock seek methods seek by the length between beat divisors per amount
+                // So the length of a seek in seconds is calculated by amount * (60 / BPM) / beatDivisor.Value
+                // To counteract this, we will multiply the amount by the beat divisor and the BPM, then divide by 120.
+                // This gets us 500 ms of seek per amount, for which we'll apply at the end.
+
+                // If we are seeking backwards, we add 250ms to counteract time passing to have backward seeking feel similar to forward seeking.
+                if (direction < 1)
+                    amount += 0.5;
+
                 var timingPoint = editorBeatmap.ControlPointInfo.TimingPointAt(clock.CurrentTimeAccurate);
                 amount *= beatDivisor.Value * (timingPoint.BPM / 120);
             }
